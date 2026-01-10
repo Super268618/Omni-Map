@@ -1,4 +1,4 @@
--- Omni Map Teleport Interface -- Final Polished Drone Mode + Speed Slider
+-- Omni Map Teleport Interface -- Drone Mode + Custom Speed TextBox
 -- LocalScript | StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -12,7 +12,7 @@ local camera = workspace.CurrentCamera
 --------------------------------------------------
 -- CONFIG
 --------------------------------------------------
-local MOVE_SPEED = 3.0 -- This is now the BASE speed, modified by the slider
+local MOVE_SPEED = 3.0 -- Initial speed
 local ROTATION_SPEED = 0.006 
 local JOYSTICK_RADIUS = 60
 local MAX_RAY_DISTANCE = 5000 
@@ -59,72 +59,53 @@ thumbCorner.CornerRadius = UDim.new(1, 0)
 thumbCorner.Parent = thumbstick
 
 --------------------------------------------------
--- SPEED SLIDER UI
+-- SPEED TEXTBOX UI
 --------------------------------------------------
-local sliderFrame = Instance.new("Frame")
-sliderFrame.Name = "SliderFrame"
-sliderFrame.Size = UDim2.fromOffset(200, 40)
-sliderFrame.Position = UDim2.new(0.5, -100, 1, -100)
-sliderFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-sliderFrame.BackgroundTransparency = 0.5
-sliderFrame.Visible = false
-sliderFrame.Parent = gui
+local speedFrame = Instance.new("Frame")
+speedFrame.Name = "SpeedFrame"
+speedFrame.Size = UDim2.fromOffset(160, 45)
+speedFrame.Position = UDim2.new(0.5, -80, 1, -100) -- Bottom Center
+speedFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+speedFrame.BackgroundTransparency = 0.5
+speedFrame.Visible = false
+speedFrame.Parent = gui
 
-local sliderCorner = Instance.new("UICorner")
-sliderCorner.Parent = sliderFrame
+local speedCorner = Instance.new("UICorner")
+speedCorner.Parent = speedFrame
 
-local sliderLabel = Instance.new("TextLabel")
-sliderLabel.Size = UDim2.new(1, 0, 0, -20)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.Text = "Speed: 3.0"
-sliderLabel.TextColor3 = Color3.new(1, 1, 1)
-sliderLabel.TextScaled = true
-sliderLabel.Parent = sliderFrame
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.fromScale(0.5, 1)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "SPEED:"
+speedLabel.TextColor3 = Color3.new(1, 1, 1)
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.TextScaled = true
+speedLabel.Parent = speedFrame
 
-local sliderTrack = Instance.new("Frame")
-sliderTrack.Size = UDim2.new(0.8, 0, 0.1, 0)
-sliderTrack.Position = UDim2.fromScale(0.1, 0.5)
-sliderTrack.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-sliderTrack.Parent = sliderFrame
+local speedInput = Instance.new("TextBox")
+speedInput.Size = UDim2.fromScale(0.4, 0.7)
+speedInput.Position = UDim2.fromScale(0.55, 0.15)
+speedInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+speedInput.Text = tostring(MOVE_SPEED)
+speedInput.TextColor3 = Color3.new(0, 1, 0) -- Green text for visibility
+speedInput.Font = Enum.Font.GothamBold
+speedInput.TextScaled = true
+speedInput.ClearTextOnFocus = true
+speedInput.Parent = speedFrame
 
-local sliderKnob = Instance.new("TextButton")
-sliderKnob.Size = UDim2.fromOffset(20, 30)
-sliderKnob.Position = UDim2.fromScale(0.2, 0.5)
-sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
-sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderKnob.Text = ""
-sliderKnob.Parent = sliderFrame
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0.2, 0)
+inputCorner.Parent = speedInput
 
---------------------------------------------------
--- SLIDER LOGIC
---------------------------------------------------
-local draggingSlider = false
-
-local function updateSlider(input)
-	local relativeX = math.clamp((input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X, 0, 1)
-	sliderKnob.Position = UDim2.fromScale(0.1 + (relativeX * 0.8), 0.5)
-	
-	-- Map 0-1 range to 1.0 - 10.0 Speed
-	MOVE_SPEED = 1 + (relativeX * 9)
-	sliderLabel.Text = string.format("Speed: %.1f", MOVE_SPEED)
-end
-
-sliderKnob.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		draggingSlider = true
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-		updateSlider(input)
-	end
-end)
-
-UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		draggingSlider = false
-	end
+-- Logic to update speed when user types
+speedInput.FocusLost:Connect(function(enterPressed)
+    local val = tonumber(speedInput.Text)
+    if val and val > 0 then
+        MOVE_SPEED = val
+        speedInput.Text = tostring(val)
+    else
+        speedInput.Text = tostring(MOVE_SPEED) -- Reset to last valid speed
+    end
 end)
 
 --------------------------------------------------
@@ -208,7 +189,7 @@ local function startCamera()
 	mapMode = true
 	touchArea.Visible = true
 	joystickBase.Visible = true
-	sliderFrame.Visible = true
+	speedFrame.Visible = true
 	
 	originalType = camera.CameraType
 	originalCF = camera.CFrame
@@ -232,7 +213,7 @@ local function stopCamera()
 	mapMode = false
 	touchArea.Visible = false
 	joystickBase.Visible = false
-	sliderFrame.Visible = false
+	speedFrame.Visible = false
 	RunService:UnbindFromRenderStep("DroneLogic")
 	camera.CameraType = originalType
 	camera.CFrame = originalCF
@@ -244,7 +225,10 @@ end
 -- INPUT (LOOK & TAP)
 --------------------------------------------------
 UIS.InputChanged:Connect(function(input)
-	if not mapMode or input == joystickTouch or draggingSlider then return end
+	if not mapMode or input == joystickTouch then return end
+    -- Prevent camera from spinning while typing in the box
+    if UIS:GetFocusedTextBox() then return end
+
 	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
 		local delta = input.Delta
 		camAngles -= Vector2.new(delta.X, delta.Y) * ROTATION_SPEED
@@ -260,7 +244,7 @@ touchArea.InputBegan:Connect(function(input)
 end)
 
 touchArea.InputEnded:Connect(function(input)
-	if not mapMode then return end
+	if not mapMode or UIS:GetFocusedTextBox() then return end
 	if tick() - tapStartTime < 0.25 then
 		local ray = camera:ViewportPointToRay(input.Position.X, input.Position.Y)
 		local params = RaycastParams.new()
